@@ -1,0 +1,49 @@
+# Save this file as .github/workflows/casio-watch.yml in a (private) repo
+# that also contains casio_sale_watcher.py.
+#
+# One-time setup (all from a phone browser or the GitHub app):
+#   1. Create a new private GitHub repo.
+#   2. Add casio_sale_watcher.py to its root.
+#   3. Repo Settings -> Secrets and variables -> Actions -> New repository
+#      secret: name = NTFY_TOPIC, value = your private ntfy.sh topic name.
+#   4. Add this file at .github/workflows/casio-watch.yml and commit.
+#   5. Actions tab -> "casio-watch" -> "Run workflow" once to confirm it
+#      works, then it runs automatically every 5 minutes.
+#
+# GitHub Actions' cron minimum resolution is 5 minutes, and under load it
+# can slip a few minutes further — this is the trade-off for zero
+# infrastructure. For faster detection, run the script in --continuous
+# mode on an always-on host instead (see README in casio_sale_watcher.py).
+
+name: casio-watch
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}   # lets you trigger a manual test run from the Actions tab
+
+permissions:
+  contents: write   # needed to commit the updated state file back to the repo
+
+jobs:
+  check-sale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install requests
+
+      - name: Poll for sale
+        run: python casio_sale_watcher.py --once --ntfy-topic "${{ secrets.NTFY_TOPIC }}"
+
+      - name: Persist state for next run
+        run: |
+          git config user.name "casio-watch-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add casio_sale_state.json
+          git diff --cached --quiet || git commit -m "update state [skip ci]"
+          git push
