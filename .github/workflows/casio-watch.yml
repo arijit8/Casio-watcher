@@ -23,7 +23,13 @@ on:
   workflow_dispatch: {}   # lets you trigger a manual test run from the Actions tab
 
 permissions:
-  contents: write   # needed to commit the updated state file back to the repo
+  contents: write   # needed to commit the updated state file back to the repoconcurrency:
+  group: casio-watch
+  cancel-in-progress: false
+
+concurrency:
+  group: casio-watch
+  cancel-in-progress: false
 
 jobs:
   check-sale:
